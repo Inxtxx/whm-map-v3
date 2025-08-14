@@ -3,25 +3,28 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>WHM 462 集签地图 · V3（蓝底·五级蓝色）</title>
+<title>WHM 462 集签地图 · V3（规则先行着色）</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  html,body,#map{height:100%;margin:0;background:#071b3a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
+  html,body,#map{height:100%;margin:0;background:#0b1d3d;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif}
   .legend{position:absolute;left:12px;bottom:12px;background:#fff;color:#000;padding:10px 12px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.2);font-size:12px;line-height:1.5}
   .legend .row{display:flex;align-items:center;margin:3px 0}
   .sw{width:16px;height:16px;border-radius:3px;margin-right:8px;border:1px solid #9db3ff99}
-  .panel{position:absolute;right:12px;top:12px;max-width:380px;background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 8px rgba(0,0,0,.25);display:none}
+  .panel{position:absolute;right:12px;top:12px;max-width:420px;background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 8px rgba(0,0,0,.25);display:none}
   .panel h3{margin:0 0 6px;font-size:16px}
   .job{border-top:1px solid #eee;padding:8px 0}
   .job a{color:#0b5fff;text-decoration:none}
   .job small{display:block;color:#666}
   .pill{display:inline-block;background:#eef;border-radius:999px;padding:2px 8px;margin:2px 4px 0 0;font-size:12px}
   .note{font-size:12px;color:#444;margin-top:6px}
+  .badge{position:absolute;left:12px;top:12px;background:#fff;color:#222;padding:8px 10px;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.18);font-size:12px}
 </style>
 </head>
 <body>
 <div id="map"></div>
+
+<div class="badge" id="badge">状态：<b>加载中</b> · 规则已内置（先行着色）</div>
 
 <div class="legend">
   <div style="font-weight:700;margin-bottom:6px;color:#000">可集签岗位（近10天）· 五级蓝色</div>
@@ -46,30 +49,57 @@
 const POA_GEOJSON_URL='https://cdn.jsdelivr.net/gh/ferocia/australia-geojsons@master/outputs/au-postcodes-Visvalingam-5.geojson';
 
 // —— 五级蓝色（只用于“可集签”区域）——
-function blue5(n){
-  if(n<=0) return '#eaf2ff';
-  if(n<=5) return '#cfe1ff';
-  if(n<=20) return '#9fc2ff';
-  if(n<=50) return '#5b94ff';
-  return '#1e6bff';
-}
+function blue5(n){ if(n<=0) return '#eaf2ff'; if(n<=5) return '#cfe1ff'; if(n<=20) return '#9fc2ff'; if(n<=50) return '#5b94ff'; return '#1e6bff'; }
 // —— 不可集签样式（灰底 + 红虚线）——
 const STYLE_INELIG={fillColor:'#e4e6eb',color:'#ff4d4f',weight:1.2,dashArray:'6,4',fillOpacity:.35,opacity:.9};
 
-// 读取规则与岗位数据（均为 462 版本）
-let RULES=null, JOBS=null;
+// —— 兜底 462 规则（与 rules/eligibility-462.json 等价的最小子集；外部文件加载成功会覆盖它）——
+let RULES = {
+  definitions: {
+    tourismExtraPostcodes: ["4406","4416","4498","7215"],
+    northernAustralia: {
+      ntAll: true,
+      // 仅保留关键邮编段的展开集（简化版，已覆盖 WA/QLD 典型北澳段；NT 全境）
+      postcodes: ["0872","6537","6642","6646","6701","6705","6707","6710","6711","6712","6713","6714","6716","6718","6720","6721","6722","6725","6726","6728","6740","6743","6751","6753","6754","6758","6760","6762","6765","6770",
+        "4472","4478","4481","4482","4680","4694","4695","4697","4699","4700","4701","4702","4703","4704","4705","4706","4707","4709","4710","4711","4712","4713","4714","4717","4720","4721","4722","4723","4724","4725","4726","4727","4728","4730","4731","4732","4733","4735","4736","4737","4738","4739","4740","4741","4742","4743","4744","4745","4746","4750","4751","4753","4754","4756","4757","4798","4799","4800","4801","4802","4803","4804","4805","4806","4807","4808","4809","4810","4811","4812","4814","4815","4816","4817","4818","4819","4820","4821","4822","4823","4824","4825","4828","4829","4830","4849","4850","4852","4854","4855","4856","4858","4859","4860","4861","4865","4868","4869","4870","4871","4872","4873","4874","4875","4876","4877","4878","4879","4880","4881","4882","4883","4884","4885","4886","4887","4888","4890","4891","4892","4895"]
+    },
+    regionalAustralia: {
+      NSW: ["2311-2312","2328-2411","2420-2490","2536-2551","2575-2594","2618-2739","2787-2898"],
+      VIC: ["3139","3211-3334","3340-3424","3430-3649","3658-3749","3753","3756","3758","3762","3764","3778-3781","3783","3797","3799","3810-3909","3921-3925","3945-3974","3979","3981-3996"],
+      QLD: ["4124-4125","4133","4211","4270-4272","4275","4280","4285","4287","4307-4499","4510","4512","4515-4519","4522-4899"],
+      WA:  ["6041-6044","6055-6056","6069","6076","6083-6084","6111","6121-6126","6200-6799"],
+      SA:  ["ALL"], TAS: ["ALL"], NT: ["ALL"], NORFOLK: ["ALL"]
+    },
+    remoteVeryRemoteByState: {
+      NSW: ["2356","2386-2387","2396","2405-2406","2672","2675","2717","2721","2726","2734-2735","2737-2739","2831","2836","2839-2842","2879","2898"],
+      QLD: ["4472","4478","4481-4482","4694-4695","4697","4699-4707","4709-4714","4717","4720-4728","4730-4733","4735-4746","4750-4751","4753-4754","4756-4757","4798-4812","4814-4825","4828-4830","4849-4861","4865","4868-4888","4890-4892","4895"],
+      SA:  ["5220-5223","5302-5304","5440","5576-5577","5582-5583","5602-5607","5611","5630-5633","5640-5642","5650-5654","5658","5660-5661","5670","5680","5690"],
+      WA:  ["0872","6434","6442-6450","6468","6473-6479","6485-6490","6510","6513-6515","6517","6535-6537","6558-6562","6605-6606","6609-6611","6613","6615-6616","6620-6623","6625-6630","6635-6642","6646-6647","6701","6705","6707","6710-6714","6716","6718","6720-6722","6725-6726","6728","6740","6743","6751","6753-6754","6758","6760","6762","6765","6770"],
+      NT:  ["ALL"], TAS: [], VIC: [], ACT: []
+    }
+  }
+};
+
+// —— 数据占位（抓取完成后会自动覆盖）——
+let JOBS = { perPOA: {} };
+
+function setBadge(text){ const b=document.getElementById('badge'); if(b) b.innerHTML=text; }
+
+// 优先加载仓库内的数据/规则；失败就用上面的兜底
 Promise.all([
-  fetch('rules/eligibility-462.json').then(r=>r.json()),
-  fetch('data/jobs-last10d.json').then(r=>r.json())
+  fetch('rules/eligibility-462.json').then(r=>r.ok?r.json():RULES).catch(()=>RULES),
+  fetch('data/jobs-last10d.json').then(r=>r.ok?r.json():JOBS).catch(()=>JOBS)
 ]).then(([rules, jobs])=>{
-  RULES=rules; JOBS=jobs;
+  RULES = rules || RULES;
+  JOBS  = jobs  || JOBS;
+  setBadge(`状态：<b>已加载</b> · 规则${rules===RULES?'(兜底)':'(仓库)'} · 数据${jobs===JOBS?'(占位)':'(已加载)'}`);
   initMap();
-}).catch(e=>{
-  console.error(e); alert('规则或数据文件缺失：请确认 rules/eligibility-462.json 与 data/jobs-last10d.json 已创建。');
+}).catch(()=>{
+  setBadge('状态：<b>仅使用内置规则</b> · 数据占位'); initMap();
 });
 
 // —— 判断工具 ——
-// 邮编 → 所属州（粗略：按首位；08xx/09xx算 NT）
+// 邮编 → 州
 function stateByPc(pc){
   pc=String(pc).padStart(4,'0'); const p=pc[0];
   if(p==='2') return 'NSW';
@@ -96,7 +126,6 @@ function inRegional(pc){
   return expandHas(segs, pc);
 }
 function inRemoteVR(pc){
-  // 远/极远 + 4 个旅游酒店特例邮编
   const st=stateByPc(pc); const segs=(RULES.definitions.remoteVeryRemoteByState[st]||[]);
   if(segs.includes('ALL')) return true;
   if (expandHas(segs, pc)) return true;
@@ -115,27 +144,32 @@ function industriesFor462(pc){
   return inds;
 }
 
-// GeoJSON 属性里找到邮编（poa_code_2021）
-function getPOA(props){const c=props.POA_CODE21||props.poa_code_2021||props.postcode||props.code||props.id||props.name; const m=String(c).match(/\b(\d{4})\b/); return m?m[1]:null;}
-function getPOAName(props){return props.POA_NAME21||props.poa_name_2021||props.name||('POA '+getPOA(props));}
+// GeoJSON 属性里找到邮编（poa_code_2021 / POA_CODE21 / postcode / name……）
+function getPOA(props){
+  const cand=[props.POA_CODE21,props.poa_code_2021,props.postcode,props.code,props.id,props.name];
+  for(const v of cand){ if(!v) continue; const m=String(v).match(/\b(\d{4})\b/); if(m) return m[1]; }
+  return null;
+}
+function getPOAName(props){ return props.POA_NAME21||props.poa_name_2021||props.name||('POA '+getPOA(props)); }
 
+// —— 地图 ——（无底图，纯蓝背景）
 function initMap(){
   const map=L.map('map',{preferCanvas:true,zoomControl:true}).setView([-25.3,133.8],4);
-  // 不要底图瓦片 → 保持纯蓝背景
 
   fetch(POA_GEOJSON_URL).then(r=>r.json()).then(geo=>{
     const layer=L.geoJSON(geo,{
       style: f=>{
         const pc=getPOA(f.properties); const inds=industriesFor462(pc);
-        if(!inds.length) return STYLE_INELIG;
-        const n=(JOBS?.perPOA?.[pc]?.count)||0;
-        return { fillColor:blue5(n), color:'#1a3a7a', weight:.6, fillOpacity:.70, opacity:.9 };
+        if(!inds.length) return STYLE_INELIG;                 // 规则先行：不可集签=灰+红虚线
+        const n=(JOBS?.perPOA?.[pc]?.count)||0;              // 岗位数据未就绪则为 0 → 浅蓝
+        return { fillColor:blue5(n), color:'#183a7a', weight:.6, fillOpacity:.72, opacity:.95 };
       },
       onEachFeature:(f,poly)=>{
         const pc=getPOA(f.properties); const nm=getPOAName(f.properties);
-        const inds=industriesFor462(pc); const n=(JOBS?.perPOA?.[pc]?.count)||0;
+        const inds=industriesFor462(pc);
 
         poly.on('mouseover', e=>{
+          const n=(JOBS?.perPOA?.[pc]?.count)||0;
           const html=`
             <div style="font-weight:700;margin-bottom:4px;">${nm}（POA ${pc}）</div>
             <div>${inds.length? '可集签行业：'+inds.map(i=>`<span class="pill">${i}</span>`).join(' ') : '<span style="color:#c0392b">不可集签（462）</span>'}</div>
@@ -143,28 +177,32 @@ function initMap(){
           poly.bindTooltip(html,{sticky:true,opacity:.97,direction:'top',offset:[0,-6]}).openTooltip(e.latlng);
           poly.setStyle({weight:1.2,fillOpacity:.85});
         });
-        poly.on('mouseout', ()=> poly.setStyle({weight:.6,fillOpacity:.70}));
+        poly.on('mouseout', ()=> poly.setStyle({weight:.6,fillOpacity:.72}));
 
         poly.on('click', ()=>{
           const panel=document.getElementById('jobsPanel');
           const title=document.getElementById('jobsTitle');
           const sub=document.getElementById('jobsSub');
           const list=document.getElementById('jobsList');
+
+          const n=(JOBS?.perPOA?.[pc]?.count)||0;
+          const items=(JOBS?.perPOA?.[pc]?.items)||[];
+
           title.textContent = `${nm}（POA ${pc}）`;
           sub.innerHTML = `${inds.length? '可集签行业：'+inds.map(i=>`<span class="pill">${i}</span>`).join(' ') : '<span style="color:#c0392b">不可集签（462）</span>'} · 近10天岗位：<b>${n}</b>`;
           list.innerHTML='';
-          const items=(JOBS?.perPOA?.[pc]?.items)||[];
           if (!items.length) {
-            list.innerHTML='<div class="note">暂未抓到具体岗位清单（可能为 0，或数据更新中）。</div>';
+            list.innerHTML='<div class="note">此区域暂无抓到具体岗位清单（或数据更新中）。</div>';
           } else {
-            items.slice(0,50).forEach(it=>{
+            items.slice(0,80).forEach(it=>{
               const div=document.createElement('div'); div.className='job';
               div.innerHTML = `<a href="${it.url}" target="_blank" rel="noopener">${it.title||'职位'}</a>
-                               <small>${it.company||''} ${it.location? '· '+it.location:''} ${it.age||''}</small>`;
+                               <small>${(it.company||'').trim()} ${it.location? '· '+it.location:''} ${it.age||''}</small>`;
               list.appendChild(div);
             });
           }
           panel.style.display='block';
+          poly.bringToFront();
         });
       }
     }).addTo(map);
