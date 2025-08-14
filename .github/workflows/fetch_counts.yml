@@ -14,7 +14,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci || npm i
-      - run: npm run fetch:v3
+       - run: npm run fetch:v3
+  env:
+    LIMIT_POAS: "6000,6714,4870,2330,2536"   # 先跑少量邮编：Perth 6000 / Karratha 6714 / Cairns 4870 等
+    MAX_PAGES: "1"                           # 每个查询只翻 1 页，验证流程
       - name: Commit data
         run: |
           git config user.name "github-actions[bot]"
