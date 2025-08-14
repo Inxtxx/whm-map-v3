@@ -1,28 +1,36 @@
 name: Update 10-day official job listings (V3)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   schedule:
-    - cron: "20 17 * * *"  # 每天 01:20（Perth 时间）左右自动跑一次（UTC 17:20）
+    - cron: "20 17 * * *"  # 每天自动跑（保留即可）
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    permissions: { contents: write }
+    timeout-minutes: 45
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with:
+          node-version: 20
       - run: npm ci || npm i
-       - run: npm run fetch:v3
-  env:
-    LIMIT_POAS: "6000,6714,4870,2330,2536"   # 先跑少量邮编：Perth 6000 / Karratha 6714 / Cairns 4870 等
-    MAX_PAGES: "1"                           # 每个查询只翻 1 页，验证流程
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # ↓↓↓ 调试限制：只跑少量邮编 & 每次只翻 1 页 ↓↓↓
+      - name: Fetch (debug-limited)
+        run: node scripts/fetch_counts_v3.mjs
+        env:
+          LIMIT_POAS: "6000,6714,4870,2330,2536"   # Perth / Karratha / Cairns / Singleton / Batemans Bay（举例）
+          MAX_PAGES: "1"                           # 每个查询只翻 1 页
+
       - name: Commit data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/jobs-last10d.json
-          git commit -m "chore(data): update 10-day job listings (official)" || echo "no changes"
+          git commit -m "chore(data): update 10-day job listings (V3 debug run)" || echo "no changes"
           git push
-timeout-minutes: 30
