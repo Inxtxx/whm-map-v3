@@ -25,3 +25,4 @@ jobs:
           git add data/jobs-last10d.json
           git commit -m "chore(data): update 10-day job listings (official)" || echo "no changes"
           git push
+timeout-minutes: 30
