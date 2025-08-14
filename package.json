@@ -1,0 +1,10 @@
+{
+  "name": "whm-map-v3",
+  "private": true,
+  "type": "module",
+  "dependencies": { "playwright": "^1.46.0" },
+  "scripts": {
+    "prepare": "playwright install --with-deps",
+    "fetch:v3": "node scripts/fetch_counts_v3.mjs"
+  }
+}
