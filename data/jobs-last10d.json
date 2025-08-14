@@ -1,8 +1,23 @@
 {
-  "generatedAtUTC": "1970-01-01T00:00:00Z",
+  "generatedAtUTC": "2025-08-14T04:55:27.114Z",
   "windowDays": 10,
   "source": "Workforce Australia (official)",
   "perPOA": {
-    "6000": { "count": 0, "items": [] }
+    "2330": {
+      "count": 0,
+      "items": []
+    },
+    "2536": {
+      "count": 0,
+      "items": []
+    },
+    "4870": {
+      "count": 0,
+      "items": []
+    },
+    "6714": {
+      "count": 0,
+      "items": []
+    }
   }
 }
